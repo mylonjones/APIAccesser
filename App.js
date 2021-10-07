@@ -1,25 +1,59 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View, Image, TextInput, Button } from 'react-native';
-import Axios from 'axios'
+import Axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 export default function App() {
   const [content, setContent] = useState({})
   const [success, setSuccess] = useState(false)
   const [text, onChanteText] = useState('https://')
+  const [urlList, setList] = useState([])
+
+  const getData = async () => {
+    try {
+      const value = await AsyncStorage.getItem('urlList')
+      if(value !== null) {
+        const listArr = JSON.parse(value)
+        if(urlList.length === 0) {
+          setList(listArr)
+        }
+        console.log(listArr)
+      }
+      console.log('async success')
+    } catch(e) {
+      console.log(e)
+    }
+  }
+  getData()
+
+  const storeData = async (value) => {
+    try {
+
+      if(!urlList.includes(value)) {
+        let list = [value].concat(urlList)
+        setList(list)
+        const jsonValue = JSON.stringify(list)
+        await AsyncStorage.setItem('urlList', jsonValue)
+      }
+    } catch (e) {
+      // saving error
+    }
+  }
 
   function getAPI() {
     console.log('start')
     Axios.get(text)
         .then((response) => {
         setContent(response.data)
-        console.log('sent')
+        storeData(text)
       })
         .catch((error) => {
           console.log(error)
         })
   }
+
 
   function findImage(data) {
     let images = []
@@ -35,6 +69,8 @@ export default function App() {
     return images
   }
 
+
+
   // useEffect(() => {
   //   if(!success) {
   //     Axios.get('https://botw-compendium.herokuapp.com/api/v2/entry/123')
@@ -47,6 +83,12 @@ export default function App() {
   //       })
   //   }
   // })
+
+  const urls = () => {
+    return urlList.map((url, index) => (<View key={index} style={styles.listItem}><Text
+      selectable={true}
+    >{url}</Text></View>))
+  }
 
   return (
     <SafeAreaView>
@@ -66,10 +108,14 @@ export default function App() {
             onPress={getAPI}
           />
           <View><Text>{JSON.stringify(content, undefined, 4)}</Text></View><Image style={styles.image} source={{uri: findImage(content)[0]}}></Image>
+          <View style={styles.list}>
+            {urls()}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
+
 }
 
 const styles = StyleSheet.create({
@@ -93,4 +139,19 @@ const styles = StyleSheet.create({
     padding: 10,
     width: '100%',
   },
+
+  list: {
+    display: 'flex',
+    marginTop: 10,
+  },
+
+  listItem: {
+    backgroundColor: 'lightsalmon',
+    margin: 3,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'black',
+    borderRadius: 5,
+    padding: 4
+  }
 });
